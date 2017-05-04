@@ -26,7 +26,7 @@ To build a new project, just go to Go4Web folder and run the installer.
     $ cd GOPATH/src/github.com/Luc-cpl/Go4Web
     $ go run Go4Web.go
 ```
-After start the installer, create your project inserting the name and folder and confirm the application path.
+After start the installer, create your project, inserting the name and folder, after that, confirm the application path.
 ```
     $ Exemple-folder/Project
     $ yes
