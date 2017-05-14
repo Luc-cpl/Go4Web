@@ -14,7 +14,7 @@ var DB Database
 
 type Search map[int]map[string]string
 
-// NewOpen abre uma cnexão no banco de dados (utilizada apenas na inicialização do programa)
+// NewOpen abre uma conexão no banco de dados (utilizada apenas na inicialização do programa)
 func NewOpen(dados string) (Database, error) {
 	db, err := sql.Open("mysql", dados)
 	return Database{db}, err

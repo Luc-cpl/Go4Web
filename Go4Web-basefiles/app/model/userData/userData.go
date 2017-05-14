@@ -2,14 +2,14 @@ package userData
 
 import (
 	"encoding/hex"
-	"myprojects/Go4Web/app/model/database"
 	"net/http"
+
+	"github.com/Luc-cpl/Go4Web/Go4Web-basefiles/app/model/database"
 
 	"github.com/gorilla/securecookie"
 
 	"crypto"
-
-	"fmt"
+	"errors"
 )
 
 //Cookie é uma variavel para utilização e criação de cookies segundo uma chae aleatória criada
@@ -22,23 +22,18 @@ var secureKey = "j2jfU3rj9f"
 var table = "users"
 
 //Login retorna se o login é verdadeiro ou falso e o ID no banco de dados
-func Login(w http.ResponseWriter, r *http.Request) (userID string, login bool) {
-
-	email := r.PostFormValue("email")
-	password := r.PostFormValue("password")
+func Login(user User) (userID string, login bool) {
 
 	hash := crypto.SHA256.New()
-	hash.Write([]byte(password + secureKey))
-	password = hex.EncodeToString(hash.Sum(nil))
+	hash.Write([]byte(user.Password + secureKey))
+	user.Password = hex.EncodeToString(hash.Sum(nil))
 
-	fmt.Println(password)
-
-	id := []string{"email", email, "senha", password}
+	id := []string{"email", user.Email, "senha", user.Password}
 	campos := []string{"codigo"}
 
 	y, _ := database.DB.Get(table, id, campos)
 
-	if y != nil {
+	if y[0]["codigo"] != "" {
 		login = true
 		userID = y[0]["codigo"]
 	}
@@ -56,45 +51,50 @@ func GetUserID(r *http.Request) (userID string) {
 	return
 }
 
-//NewUser cria o usuario no banco de dados e retorna sua cituação de Login (ou retorna erro se o usuário já existe)
-func NewUser(r *http.Request) (userID string, login bool, erro string) {
-	email := r.PostFormValue("email")
-	emailConf := r.PostFormValue("emailConf")
-	password := r.PostFormValue("password")
-	passwordConf := r.PostFormValue("passwordConf")
-	name := r.PostFormValue("name")
+//User pass user information to model
+type User struct {
+	Name         string
+	Email        string
+	EmailConf    string
+	Password     string
+	PasswordConf string
+}
 
-	if email == emailConf {
-		if password == passwordConf {
+//NewUser cria o usuario no banco de dados e retorna sua cituação de Login (ou retorna erro se o usuário já existe)
+func NewUser(user User) (userID string, login bool, err error) {
+
+	if user.Email == user.EmailConf {
+		if user.Password == user.PasswordConf {
 			col := []string{"nome", "email", "senha"}
 
 			hash := crypto.SHA256.New()
-			hash.Write([]byte(password + secureKey))
-			password = hex.EncodeToString(hash.Sum(nil))
+			hash.Write([]byte(user.Password + secureKey))
+			password := hex.EncodeToString(hash.Sum(nil))
 
-			val := []string{name, email, password}
+			val := []string{user.Name, user.Email, password}
 
 			err := database.DB.Insert(table, col, val)
-			if err != nil {
-				erro = err.Error()
-				login = false
-				return
-			} else {
-				id := []string{"email", email}
-				campos := []string{"codigo"}
-				y, _ := database.DB.Get(table, id, campos)
 
-				if y != nil {
-					login = true
-					userID = y[0]["codigo"]
-				}
+			if err != nil {
+				err = errors.New("User already exist")
+				return "", false, err
+			}
+
+			id := []string{"email", user.Email}
+			campos := []string{"codigo"}
+			y, _ := database.DB.Get(table, id, campos)
+
+			if y != nil {
+				login = true
+				userID = y[0]["codigo"]
+				return userID, true, nil
 			}
 
 		} else {
-			erro = "senha"
+			err = errors.New("Check your password")
 		}
 	} else {
-		erro = "email"
+		err = errors.New("Check your email")
 	}
 	return
 }

@@ -77,12 +77,28 @@ func main() {
 	save(s, path+"render/", "render", ".go")
 
 	os.Mkdir(path+"view", os.FileMode(0775))
-	s = makeFile("Go4Web-basefiles/view/home.tmpl", folder)
-	save(s, path+"view/", "home", ".tmpl")
-	s = makeFile("Go4Web-basefiles/view/layout.tmpl", folder)
-	save(s, path+"view/", "layout", ".tmpl")
-	s = makeFile("Go4Web-basefiles/view/login.tmpl", folder)
-	save(s, path+"view/", "login", ".tmpl")
+	s = makeFile("Go4Web-basefiles/view/home.html", folder)
+	save(s, path+"view/", "home", ".html")
+	s = makeFile("Go4Web-basefiles/view/template.html", folder)
+	save(s, path+"view/", "template", ".html")
+	s = makeFile("Go4Web-basefiles/view/error404.html", folder)
+	save(s, path+"view/", "error404", ".html")
+	s = makeFile("Go4Web-basefiles/view/viewmap.json", folder)
+	save(s, path+"view/", "viewmap", ".json")
+
+	os.Mkdir(path+"view/login", os.FileMode(0775))
+	s = makeFile("Go4Web-basefiles/view/login/login.html", folder)
+	save(s, path+"view/login/", "login", ".html")
+	s = makeFile("Go4Web-basefiles/view/login/login.css", folder)
+	save(s, path+"view/login/", "login", ".css")
+	s = makeFile("Go4Web-basefiles/view/login/login.js", folder)
+	save(s, path+"view/login/", "login", ".js")
+
+	os.Mkdir(path+"view/user", os.FileMode(0775))
+	s = makeFile("Go4Web-basefiles/view/user/user.html", folder)
+	save(s, path+"view/user/", "user", ".html")
+	s = makeFile("Go4Web-basefiles/view/user/template.html", folder)
+	save(s, path+"view/user/", "template", ".html")
 
 	fmt.Println()
 	fmt.Println("You are read to go!")
@@ -102,12 +118,12 @@ func save(s string, caminho string, nomeArquivo string, tipoArquivo string) {
 func makeFile(file string, name string) (s string) {
 	buf := bytes.NewBuffer(nil)
 
-	f, _ := os.Open(file) // Error handling elided for brevity.
-	io.Copy(buf, f)       // Error handling elided for brevity.
+	f, _ := os.Open(file)
+	io.Copy(buf, f)
 	f.Close()
 
 	s = string(buf.Bytes())
 
-	s = strings.Replace(s, "myprojects/Go4Web", name, -1)
+	s = strings.Replace(s, "github.com/Luc-cpl/Go4Web/Go4Web-basefiles", name, -1)
 	return
 }

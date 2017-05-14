@@ -6,11 +6,21 @@ import (
 	"net/http"
 )
 
-func Render(w http.ResponseWriter, filename string, data interface{}) {
+func Render(w http.ResponseWriter, data interface{}, files ...string) {
 	var err error
 	tmpl := template.New("")
 
-	if tmpl, err = template.ParseFiles("view/layout.tmpl", filename); err != nil {
+	if len(files) == 2 {
+		tmpl, err = template.ParseFiles(files[0], files[1])
+	}
+	if len(files) == 3 {
+		tmpl, err = template.ParseFiles(files[0], files[1], files[2])
+	}
+	if len(files) == 4 {
+		tmpl, err = template.ParseFiles(files[0], files[1], files[2], files[3])
+	}
+
+	if err != nil {
 		fmt.Println(err)
 		return
 	}

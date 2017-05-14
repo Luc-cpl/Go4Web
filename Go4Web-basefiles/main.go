@@ -2,8 +2,8 @@ package main
 
 import (
 	"log"
-	"myprojects/Go4Web/app"
-	"myprojects/Go4Web/app/model/database"
+	"github.com/Luc-cpl/Go4Web/Go4Web-basefiles/app"
+	"github.com/Luc-cpl/Go4Web/Go4Web-basefiles/app/model/database"
 	"net/http"
 )
 
@@ -18,5 +18,5 @@ func main() {
 
 	router := routes.NewRouter()
 
-	http.ListenAndServe(":7012", router)
+	http.ListenAndServe(":8080", router)
 }

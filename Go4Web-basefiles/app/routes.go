@@ -1,8 +1,9 @@
 package routes
 
 import (
-	"myprojects/Go4Web/app/controller"
 	"net/http"
+
+	"github.com/Luc-cpl/Go4Web/Go4Web-basefiles/app/controller"
 
 	"github.com/gorilla/mux"
 )
@@ -10,13 +11,15 @@ import (
 func NewRouter() *mux.Router {
 
 	var routes = Routes{
-		Route{"Index", "GET", "/", controller.Index},
-
-		Route{"UserLogin", "POST", "/userLogin", controller.UserLogin},
-		Route{"NewUser", "POST", "/newUser", controller.NewUser},
-
+		//API
+		Route{"UserLogin", "POST", "/api/users/login", controller.UserLogin},
+		Route{"NewUser", "POST", "/api/users/new", controller.NewUser},
+		Route{"UpdateUser", "PUT", "/api/users/update", controller.UpdateUser},
 		Route{"ExemploGet", "GET", "/exemploGet/{id}", controller.ExemploGet},
-		//Route{"User", "POST", "/user", controller.User},
+
+		//views manager
+		Route{"Index", "GET", "/", controller.Views},
+		Route{"Views", "GET", "/{rest:.*}", controller.Views},
 	}
 
 	router := mux.NewRouter().StrictSlash(true)
@@ -24,7 +27,6 @@ func NewRouter() *mux.Router {
 	for _, route := range routes {
 		router.Methods(route.Method).Path(route.Pattern).Name(route.Name).Handler(route.HandlerFunc)
 	}
-	router.PathPrefix("/").Handler(http.FileServer(http.Dir("./public/")))
 
 	return router
 
