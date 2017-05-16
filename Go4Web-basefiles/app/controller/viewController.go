@@ -31,7 +31,7 @@ type viewMap struct {
 func Views(w http.ResponseWriter, r *http.Request) {
 	url := mux.Vars(r)["rest"]
 
-	raw, err := ioutil.ReadFile("./view/viewmap.json")
+	raw, err := ioutil.ReadFile("./views/viewmap.json")
 
 	if err != nil {
 		fmt.Println(err.Error())
@@ -76,22 +76,14 @@ func Views(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if auth == true && exist == true {
-		if view.CSS != "" && view.JS != "" {
-			render.Render(w, nil, "view/"+view.Template, "view/"+view.HTML, "view/"+view.CSS, "view/"+view.JS)
-		} else if view.CSS != "" {
-			render.Render(w, nil, "view/"+view.Template, "view/"+view.HTML, "view/"+view.CSS)
-		} else if view.JS != "" {
-			render.Render(w, nil, "view/"+view.Template, "view/"+view.HTML, "view/"+view.JS)
-		} else {
-			render.Render(w, nil, "view/"+view.Template, "view/"+view.HTML)
-		}
+		render.Render(w, nil, view.Template, view.HTML, view.CSS, view.JS)
 	} else if exist == true {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	} else {
 		if strings.ContainsAny(url, ".") {
 			http.ServeFile(w, r, "./public/"+url)
 		} else {
-			render.Render(w, nil, "view/template.html", "view/error404.html")
+			render.Render(w, nil, "template.html", "error404.html")
 		}
 	}
 

@@ -6,12 +6,17 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
 func main() {
+
+	searchDir := "Go4Web-basefiles"
+	fileList := []string{}
+
 	valid := false
-	goPath := os.Getenv("GOPATH")
+	goPath := strings.Replace(os.Getenv("GOPATH"), `\`, `/`, -1)
 	scanner := bufio.NewScanner(os.Stdin)
 	var value string
 	var folder string
@@ -34,71 +39,38 @@ func main() {
 			valid = true
 		}
 	}
-	path := goPath + "/src/" + folder + "/"
+
+	err := filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
+		fileList = append(fileList, path)
+		return nil
+	})
+
+	if err != nil {
+		fmt.Println(err)
+	}
 
 	fmt.Println("Copying files to new aplication folder...")
+	newPath := goPath + "/src/" + folder
 
-	os.Mkdir(path, os.FileMode(0775))
-	s := makeFile("Go4Web-basefiles/main.go", folder)
-	save(s, path, "main", ".go")
-
-	os.Mkdir(path+"app", os.FileMode(0775))
-	s = makeFile("Go4Web-basefiles/app/routes.go", folder)
-	save(s, path+"app/", "routes", ".go")
-
-	os.Mkdir(path+"app/controller", os.FileMode(0775))
-	s = makeFile("Go4Web-basefiles/app/controller/controller.go", folder)
-	save(s, path+"app/controller/", "controller", ".go")
-	s = makeFile("Go4Web-basefiles/app/controller/userController.go", folder)
-	save(s, path+"app/controller/", "userController", ".go")
-	s = makeFile("Go4Web-basefiles/app/controller/viewController.go", folder)
-	save(s, path+"app/controller/", "viewController", ".go")
-
-	os.Mkdir(path+"app/model", os.FileMode(0775))
-
-	os.Mkdir(path+"app/model/userData", os.FileMode(0775))
-	s = makeFile("Go4Web-basefiles/app/model/userData/userData.go", folder)
-	save(s, path+"app/model/userData/", "userData", ".go")
-
-	os.Mkdir(path+"app/model/database", os.FileMode(0775))
-	s = makeFile("Go4Web-basefiles/app/model/database/database.go", folder)
-	save(s, path+"app/model/database/", "database", ".go")
-
-	os.Mkdir(path+"public", os.FileMode(0775))
-
-	os.Mkdir(path+"public/css", os.FileMode(0775))
-	s = makeFile("Go4Web-basefiles/public/css/style.css", folder)
-	save(s, path+"public/css/", "style", ".css")
-
-	os.Mkdir(path+"public/js", os.FileMode(0775))
-
-	os.Mkdir(path+"render", os.FileMode(0775))
-	s = makeFile("Go4Web-basefiles/render/render.go", folder)
-	save(s, path+"render/", "render", ".go")
-
-	os.Mkdir(path+"view", os.FileMode(0775))
-	s = makeFile("Go4Web-basefiles/view/home.html", folder)
-	save(s, path+"view/", "home", ".html")
-	s = makeFile("Go4Web-basefiles/view/template.html", folder)
-	save(s, path+"view/", "template", ".html")
-	s = makeFile("Go4Web-basefiles/view/error404.html", folder)
-	save(s, path+"view/", "error404", ".html")
-	s = makeFile("Go4Web-basefiles/view/viewmap.json", folder)
-	save(s, path+"view/", "viewmap", ".json")
-
-	os.Mkdir(path+"view/login", os.FileMode(0775))
-	s = makeFile("Go4Web-basefiles/view/login/login.html", folder)
-	save(s, path+"view/login/", "login", ".html")
-	s = makeFile("Go4Web-basefiles/view/login/login.css", folder)
-	save(s, path+"view/login/", "login", ".css")
-	s = makeFile("Go4Web-basefiles/view/login/login.js", folder)
-	save(s, path+"view/login/", "login", ".js")
-
-	os.Mkdir(path+"view/user", os.FileMode(0775))
-	s = makeFile("Go4Web-basefiles/view/user/user.html", folder)
-	save(s, path+"view/user/", "user", ".html")
-	s = makeFile("Go4Web-basefiles/view/user/template.html", folder)
-	save(s, path+"view/user/", "template", ".html")
+	for _, file := range fileList {
+		file = strings.Replace(file, `\`, `/`, -1)
+		newFilePath := newPath + strings.Replace(file, searchDir, "", 1)
+		if strings.ContainsAny(file, ".") == false {
+			fmt.Println("pasta: " + newFilePath)
+			err := os.MkdirAll(newFilePath, os.FileMode(0775))
+			if err != nil {
+				fmt.Println(err)
+				break
+			}
+		} else {
+			s := makeFile(file, folder)
+			fileName := filepath.Base(file)
+			newFilePath = newFilePath[0 : len(newFilePath)-len(fileName)]
+			ext := filepath.Ext(file)
+			name := fileName[0 : len(fileName)-len(ext)]
+			save(s, newFilePath, name, ext)
+		}
+	}
 
 	fmt.Println()
 	fmt.Println("You are read to go!")
