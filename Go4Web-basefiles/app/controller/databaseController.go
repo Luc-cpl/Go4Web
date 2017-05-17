@@ -61,7 +61,6 @@ func DatabaseGet(w http.ResponseWriter, r *http.Request) {
 			newQuery1[i] = query1[i-3]
 		}
 		query1 = newQuery1
-		fmt.Println(query1)
 	}
 	var auth authorization
 
@@ -82,7 +81,6 @@ func DatabaseGet(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		fmt.Println(response)
 		json.NewEncoder(w).Encode(response)
 	}
 
