@@ -28,19 +28,19 @@ func (DB Database) Get(table string, id []string, campos []string) (resultado Se
 		if index > 0 {
 			y = y + ", "
 		}
-		y = y + element
+		y = y + "`" + element + "`"
 	}
 
 	var idQuery string
-	for index, element := range id {
-		if index > 0 && (len(id)-(index+1) >= 2) {
-			idQuery = idQuery + " AND `" + id[index+1] + "`='" + id[index+2] + "'"
-		}
-		if int(index) < 1 {
-			idQuery = "`" + element + "`='" + id[index+1] + "'"
+
+	for i := 0; i < (len(id) / 3); i = i + 3 {
+		if i == 0 {
+			idQuery = "`" + id[0] + "` " + id[1] + " '" + id[2] + "'"
+		} else {
+			idQuery = idQuery + " AND ` " + id[i] + " `" + id[i+1] + "'" + id[i+2] + "'"
 		}
 	}
-
+	table = "`" + table + "`"
 	query := "SELECT " + y + " FROM " + table + " WHERE " + idQuery + ";"
 
 	rows, _ := DB.Query(query)
@@ -62,7 +62,12 @@ func (DB Database) Get(table string, id []string, campos []string) (resultado Se
 		for i, colName := range cols {
 			val := columnPointers[i].(*interface{})
 			t := *val
-			r[row][colName] = string(t.([]uint8))
+			if t == nil {
+				r[row][colName] = ""
+			} else {
+				r[row][colName] = string(t.([]uint8))
+			}
+
 		}
 		row++
 	}

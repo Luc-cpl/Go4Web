@@ -24,8 +24,8 @@ func UserLogin(w http.ResponseWriter, r *http.Request) {
 	user.Email = r.PostFormValue("email")
 	user.Password = r.PostFormValue("password")
 
-	userID, login := userData.Login(user)
-	value := map[string]string{"userId": userID}
+	userID, auth, login := userData.Login(user)
+	value := map[string]string{"userId": userID, "userAuth": auth}
 	if login == false {
 		response.Login = false
 		json.NewEncoder(w).Encode(response)
@@ -51,9 +51,9 @@ func NewUser(w http.ResponseWriter, r *http.Request) {
 	user.PasswordConf = r.PostFormValue("passwordConf")
 	user.Name = r.PostFormValue("name")
 
-	userID, _, err := userData.NewUser(user)
+	userID, auth, err := userData.NewUser(user)
 
-	value := map[string]string{"userId": userID}
+	value := map[string]string{"userId": userID, "userAuth": auth}
 	if err != nil {
 		response.Login = false
 		response.Err = err.Error()
@@ -69,9 +69,4 @@ func NewUser(w http.ResponseWriter, r *http.Request) {
 		response.Login = true
 		json.NewEncoder(w).Encode(response)
 	}
-}
-
-//UserUpdate updates a user account on database
-func UpdateUser(w http.ResponseWriter, r *http.Request) {
-
 }
