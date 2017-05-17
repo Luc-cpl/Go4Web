@@ -8,8 +8,6 @@ import (
 	"github.com/Luc-cpl/Go4Web/Go4Web-basefiles/app/model/database"
 	"github.com/Luc-cpl/Go4Web/Go4Web-basefiles/app/model/userData"
 
-	"fmt"
-
 	"encoding/json"
 
 	"github.com/gorilla/mux"
@@ -72,16 +70,19 @@ func DatabaseGet(w http.ResponseWriter, r *http.Request) {
 		if auth.allContent == false && query1[0] != "user-id" {
 			auth.Auth = false
 		}
+	} else {
+		json.NewEncoder(w).Encode("The request values don´t match with necessary number of values")
 	}
 
 	if auth.Auth == true {
 		response, err := database.DB.Get(table, query1, query2)
 		if err != nil {
-			fmt.Println(err)
-			return
+			json.NewEncoder(w).Encode(err)
 		}
 
 		json.NewEncoder(w).Encode(response)
+	} else {
+		json.NewEncoder(w).Encode("You don't have autorization for this request")
 	}
 
 }

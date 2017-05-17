@@ -35,13 +35,13 @@ func (DB Database) Get(table string, id []string, campos []string) (resultado Se
 
 	for i := 0; i < (len(id) / 3); i = i + 3 {
 		if i == 0 {
-			idQuery = "`" + id[0] + "` " + id[1] + " '" + id[2] + "'"
+			idQuery = " WHERE `" + id[0] + "` " + id[1] + " '" + id[2] + "'"
 		} else {
 			idQuery = idQuery + " AND ` " + id[i] + " `" + id[i+1] + "'" + id[i+2] + "'"
 		}
 	}
 	table = "`" + table + "`"
-	query := "SELECT " + y + " FROM " + table + " WHERE " + idQuery + ";"
+	query := "SELECT " + y + " FROM " + table + idQuery + ";"
 
 	rows, _ := DB.Query(query)
 	cols, _ := rows.Columns()
@@ -82,7 +82,7 @@ func (DB Database) Insert(table string, campos []string, valores []string) (err 
 		if index > 0 {
 			y = y + ", "
 		}
-		y = y + element
+		y = y + "`" + element + "`"
 	}
 	var x string
 	for index, element := range valores {
@@ -96,7 +96,7 @@ func (DB Database) Insert(table string, campos []string, valores []string) (err 
 	if err != nil {
 		return
 	}
-
+	table = "`" + table + "`"
 	query := "INSERT INTO " + table + "(" + y + ") VALUES (" + x + ");"
 
 	smt, err := tx.Prepare(query)

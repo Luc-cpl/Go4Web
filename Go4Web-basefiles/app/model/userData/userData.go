@@ -10,6 +10,7 @@ import (
 
 	"crypto"
 	"errors"
+	"fmt"
 )
 
 //Cookie é uma variavel para utilização e criação de cookies segundo uma chae aleatória criada
@@ -20,6 +21,7 @@ var secureKey = "j2jfU3rj9f"
 
 //table é a variavel que indica a tabela de usuários no banco de dados
 var table = "users"
+var tableAuth = "users-auth"
 
 //User pass user information to model
 type User struct {
@@ -38,14 +40,17 @@ func Login(user User) (userID string, auth string, login bool) {
 	user.Password = hex.EncodeToString(hash.Sum(nil))
 
 	id := []string{"email", "=", user.Email, "password", "=", user.Password}
-	campos := []string{"user-id", "auth-level"}
-
+	campos := []string{"user-id"}
 	y, _ := database.DB.Get(table, id, campos)
+
+	id = []string{"user-id", "=", y[0]["user-id"]}
+	campos = []string{"auth-level"}
+	w, _ := database.DB.Get(tableAuth, id, campos)
 
 	if y[0]["user-id"] != "" {
 		login = true
 		userID = y[0]["user-id"]
-		auth = y[0]["auth-level"]
+		auth = w[0]["auth-level"]
 	}
 	return
 }
@@ -96,15 +101,24 @@ func NewUser(user User) (userID string, auth string, err error) {
 			campos := []string{"user-id"}
 			y, _ := database.DB.Get(table, id, campos)
 
-			if y != nil {
-				auth = y[0]["auth-level"]
-				userID = y[0]["user-id"]
-				return userID, auth, nil
+			userID := y[0]["user-id"]
+
+			err = database.DB.Insert(tableAuth, []string{"user-id"}, []string{userID})
+
+			if err != nil {
+				fmt.Println(err)
 			}
 
-		} else {
-			err = errors.New("Check your password")
+			id = []string{"user-id", "=", y[0]["user-id"]}
+			campos = []string{"auth-level"}
+			w, _ := database.DB.Get(tableAuth, id, campos)
+
+			auth = w[0]["auth-level"]
+			return userID, auth, nil
+
 		}
+		err = errors.New("Check your password")
+
 	} else {
 		err = errors.New("Check your email")
 	}
