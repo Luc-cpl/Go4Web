@@ -31,12 +31,15 @@ func DatabaseGet(w http.ResponseWriter, r *http.Request) {
 	urlValues := mux.Vars(r)["rest"]
 
 	if strings.Contains(urlValues, "user-id") {
+		json.NewEncoder(w).Encode("Unauthorized request")
 		return
 	} else if strings.Contains(urlValues, "password") {
+		json.NewEncoder(w).Encode("Unauthorized request")
 		return
 	}
 
 	if strings.Count(urlValues, "/") != 3 {
+		json.NewEncoder(w).Encode("The path don't matches with necessary fields")
 		return
 	}
 
@@ -62,27 +65,31 @@ func DatabaseGet(w http.ResponseWriter, r *http.Request) {
 	}
 	var auth authorization
 
-	if (len(query1) % 3) == 0 {
+	if (len(query1)%3) == 0 && len(query1) > 0 {
+
 		userAuth, _ := strconv.Atoi(userData.GetUserAuth(r))
 
 		auth = authCheck(userAuth, table)
 
-		if auth.allContent == false && query1[0] != "user-id" {
+		if auth.AllContent == false && query1[0] != "user-id" {
 			auth.Auth = false
 		}
 	} else {
 		json.NewEncoder(w).Encode("The request values don´t match with necessary number of values")
+		return
 	}
 
 	if auth.Auth == true {
 		response, err := database.DB.Get(table, query1, query2)
 		if err != nil {
 			json.NewEncoder(w).Encode(err)
+			return
 		}
 
 		json.NewEncoder(w).Encode(response)
 	} else {
 		json.NewEncoder(w).Encode("You don't have autorization for this request")
+		return
 	}
 
 }
@@ -101,7 +108,7 @@ func DatabaseDelete(w http.ResponseWriter, r *http.Request) {
 
 type authorization struct {
 	Auth       bool
-	allContent bool
+	AllContent bool
 	Create     bool
 	Change     bool
 	Delete     bool
@@ -116,7 +123,7 @@ func authCheck(userAuth int, table string) (auth authorization) {
 	check, _ := database.DB.Get("db-auth", checkQuery1, checkQuery2)
 	authLevel, _ := strconv.Atoi(check[0]["auth-level"])
 	regressiveAuth, _ := strconv.Atoi(check[0]["regressive-auth"])
-	allcontentAuth, _ := strconv.Atoi(check[0]["allcontent-auth"])
+	AllcontentAuth, _ := strconv.Atoi(check[0]["allcontent-auth"])
 	createAuth, _ := strconv.Atoi(check[0]["create-auth"])
 	changeAuth, _ := strconv.Atoi(check[0]["change-auth"])
 	deleteAuth, _ := strconv.Atoi(check[0]["delete-auth"])
@@ -124,7 +131,7 @@ func authCheck(userAuth int, table string) (auth authorization) {
 	//check for basic authorization
 	if check[0]["auth"] == "0" {
 		auth.Auth = true
-		auth.allContent = true
+		auth.AllContent = true
 	} else if authLevel >= userAuth && regressiveAuth <= userAuth {
 		auth.Auth = true
 	} else if userAuth == 0 {
@@ -133,8 +140,8 @@ func authCheck(userAuth int, table string) (auth authorization) {
 		return
 	}
 
-	if allcontentAuth >= userAuth {
-		auth.allContent = true
+	if AllcontentAuth >= userAuth {
+		auth.AllContent = true
 	}
 	if createAuth >= userAuth {
 		auth.Create = true

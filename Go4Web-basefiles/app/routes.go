@@ -14,7 +14,6 @@ func NewRouter() *mux.Router {
 		//API
 		Route{"UserLogin", "POST", "/api/users/login", controller.UserLogin},
 		Route{"NewUser", "POST", "/api/users/new", controller.NewUser},
-		Route{"ExemploGet", "GET", "/exemploGet/{id}", controller.ExemploGet},
 
 		//database manager
 		Route{"DatabaseGet", "GET", "/api/db/get/{rest:.*}", controller.DatabaseGet},
