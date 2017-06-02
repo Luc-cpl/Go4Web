@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -23,6 +24,8 @@ import (
 //	query1 = follows databese function
 //	query2 = follows databese function
 
+//password and user-id are forbiden in all mettods
+
 var splitVar1 = "/"
 var splitVar2 = "&"
 
@@ -30,11 +33,9 @@ var splitVar2 = "&"
 func DatabaseGet(w http.ResponseWriter, r *http.Request) {
 	urlValues := mux.Vars(r)["rest"]
 
-	if strings.Contains(urlValues, "user-id") {
-		json.NewEncoder(w).Encode("Unauthorized request")
-		return
-	} else if strings.Contains(urlValues, "password") {
-		json.NewEncoder(w).Encode("Unauthorized request")
+	err := contentCheck(urlValues)
+	if err != nil {
+		json.NewEncoder(w).Encode(err)
 		return
 	}
 
@@ -69,7 +70,12 @@ func DatabaseGet(w http.ResponseWriter, r *http.Request) {
 
 		userAuth, _ := strconv.Atoi(userData.GetUserAuth(r))
 
-		auth = authCheck(userAuth, table)
+		auth, err := authCheck(userAuth, table)
+
+		if err != nil {
+			json.NewEncoder(w).Encode("error requesting authorization")
+			return
+		}
 
 		if auth.AllContent == false && query1[0] != "user-id" {
 			auth.Auth = false
@@ -94,8 +100,60 @@ func DatabaseGet(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func DatabasePut(w http.ResponseWriter, r *http.Request) {
+//DatabasePost need keys passed on GET mettod and values on POST: /api/db/post/table/key1&key2&key3
+//All posts are bound to a user-id (you can use an annonimous id = 0 if needed)
+func DatabasePost(w http.ResponseWriter, r *http.Request) {
+	urlValues := mux.Vars(r)["rest"]
 
+	err := contentCheck(urlValues)
+	if err != nil {
+		json.NewEncoder(w).Encode(err)
+		return
+	}
+
+	if strings.Count(urlValues, "/") != 1 {
+		json.NewEncoder(w).Encode("The path don't matches with necessary fields")
+		return
+	}
+	s := strings.Split(urlValues, splitVar1)
+	table := s[0]
+
+	userID := userData.GetUserID(r)
+
+	query1 := strings.Split(s[1], splitVar2)
+	newQuery1 := make([]string, len(query1)+1)
+	newQuery1[0] = "user-id"
+	for i := 1; i < len(newQuery1); i++ {
+		newQuery1[i] = query1[i-1]
+	}
+	query1 = newQuery1
+
+	query2 := make([]string, len(query1))
+	query2[0] = userID
+	for i := 1; i < len(query1); i++ {
+		query2[i] = r.PostFormValue(query1[i])
+	}
+
+	userAuth, _ := strconv.Atoi(userData.GetUserAuth(r))
+
+	auth, err := authCheck(userAuth, table)
+
+	if err != nil {
+		json.NewEncoder(w).Encode("error requesting authorization")
+		return
+	}
+
+	if auth.Create == true {
+		err = database.DB.Insert(table, query1, query2)
+		if err != nil {
+			json.NewEncoder(w).Encode("err")
+			return
+		}
+		json.NewEncoder(w).Encode("data included to database")
+	} else {
+		json.NewEncoder(w).Encode("You don't have autorization for this request")
+		return
+	}
 }
 
 func DatabaseUpdate(w http.ResponseWriter, r *http.Request) {
@@ -106,51 +164,118 @@ func DatabaseDelete(w http.ResponseWriter, r *http.Request) {
 
 }
 
-type authorization struct {
-	Auth       bool
-	AllContent bool
-	Create     bool
-	Change     bool
-	Delete     bool
+type Authorization struct {
+	Get       bool
+	GetAll    bool
+	Create    bool
+	CreateAll bool
+	Change    bool
+	ChangeAll bool
+	Delete    bool
+	DeleteAll bool
 }
 
-func authCheck(userAuth int, table string) (auth authorization) {
-
-	checkQuery1 := []string{"table-name", "=", table}
-
-	checkQuery2 := []string{"auth", "auth-level", "regressive-auth", "allcontent-auth", "create-auth", "change-auth", "delete-auth"}
-
-	check, _ := database.DB.Get("db-auth", checkQuery1, checkQuery2)
-	authLevel, _ := strconv.Atoi(check[0]["auth-level"])
-	regressiveAuth, _ := strconv.Atoi(check[0]["regressive-auth"])
-	AllcontentAuth, _ := strconv.Atoi(check[0]["allcontent-auth"])
-	createAuth, _ := strconv.Atoi(check[0]["create-auth"])
-	changeAuth, _ := strconv.Atoi(check[0]["change-auth"])
-	deleteAuth, _ := strconv.Atoi(check[0]["delete-auth"])
-
-	//check for basic authorization
-	if check[0]["auth"] == "0" {
-		auth.Auth = true
-		auth.AllContent = true
-	} else if authLevel >= userAuth && regressiveAuth <= userAuth {
-		auth.Auth = true
-	} else if userAuth == 0 {
-		auth.Auth = true
-	} else {
+func AuthCheck(userAuth int, table string, methods ...string) (auth Authorization, err error) {
+	if userAuth == 0 {
+		auth.Get = true
+		auth.GetAll = true
+		auth.Create = true
+		auth.CreateAll = true
+		auth.Change = true
+		auth.ChangeAll = true
+		auth.Delete = true
+		auth.DeleteAll = true
 		return
 	}
 
-	if AllcontentAuth >= userAuth {
-		auth.AllContent = true
+	checkQuery1 := []string{"table-name", "=", table}
+	for _, method := range methods {
+		checkQuery2 := []string{}
+		if method == "GET" {
+			checkQuery2 = []string{
+				"auth-level",
+				"regressive-auth-level",
+				"allcontent-auth",
+				"regressive-allcontent-auth"}
+		} else if method == "POST" {
+			checkQuery2 = []string{
+				"auth-level",
+				"regressive-auth-level",
+				"create-auth",
+				"regressive-create-auth"}
+		} else if method == "UPDATE" {
+			checkQuery2 = []string{
+				"change-auth",
+				"regressive-change-auth",
+				"allcontent-change-auth",
+				"regressive-allcontent-change-auth"}
+		} else if method == "DELETE" {
+			checkQuery2 = []string{
+				"delete-auth",
+				"regressive-delete-auth",
+				"allcontent-delete-auth",
+				"regressive-allcontent-delete-auth"}
+		}
+
+		check, err := database.DB.Get("db-auth", checkQuery1, checkQuery2)
+		if err != nil {
+			return auth, err
+		}
+		authLevel := 999
+		regLevel := 999
+		allLevel := 999
+		regAllLevel := 999
+		for _, y := range check {
+			s := make(map[int]int)
+			n := 0
+			for _, value := range y {
+				s[n], _ = strconv.Atoi(value)
+				n++
+			}
+			if s[0] < authLevel && s[0] > userAuth {
+				authLevel = s[0]
+				regLevel = s[1]
+				allLevel = s[2]
+				regAllLevel = s[3]
+			} else if s[0] == userAuth {
+				authLevel = s[0]
+				regLevel = s[1]
+				allLevel = s[2]
+				regAllLevel = s[3]
+				break
+			}
+		}
+		if authLevel >= userAuth && regLevel <= userAuth {
+			if method == "GET" {
+				auth.GetAll = true
+			} else if method == "POST" {
+				auth.CreateAll = true
+			} else if method == "UPDATE" {
+				auth.ChangeAll = true
+			} else if method == "DELETE" {
+				auth.DeleteAll = true
+			}
+			if allLevel >= userAuth && regAllLevel <= userAuth {
+
+			}
+
+		}
+
 	}
-	if createAuth >= userAuth {
-		auth.Create = true
-	}
-	if changeAuth >= userAuth {
-		auth.Change = true
-	}
-	if deleteAuth >= userAuth {
-		auth.Delete = true
+
+	return
+}
+
+func contentCheck(urlValues string) (err error) {
+	if strings.Contains(urlValues, "user-id") {
+		err = errors.New("Unauthorized request")
+		return
+	} else if strings.Contains(urlValues, "password") {
+		err = errors.New("Unauthorized request")
+		return
+	} else if strings.Contains(urlValues, ";") {
+		err = errors.New("Unauthorized request")
+		return
 	}
 	return
 }

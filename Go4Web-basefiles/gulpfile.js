@@ -6,19 +6,18 @@ var uglify = require('gulp-uglify');
 var sass = require('gulp-sass');
 var cleanCSS = require('gulp-clean-css');
 var htmlmin = require('gulp-htmlmin');
-var webpack = require('webpack-stream');
 var rename = require('gulp-rename');
 
 var babelPreset = 'latest';
 
-gulp.task('default', ['js', 'css', 'html', 'js-public', 'public-css'], function(){
+gulp.task('default', ['js', 'css', 'html', 'public-js', 'public-css'], function(){
     gulp.watch('views/files/**/*.js',['js']);
     gulp.watch('views/files/**/*.scss',['css']);
     gulp.watch('views/files/**/*.sass',['css']);
     gulp.watch('views/files/**/*.sass',['css']);
     gulp.watch('views/files/**/*.html',['html']);
     gulp.watch('public/**/*.css',['public-css']);
-    gulp.watch('public/**/*.js',['public-css']);
+    gulp.watch('public/**/*.js',['public-js']);
 });
 
 gulp.task('js', function () {
@@ -31,14 +30,16 @@ gulp.task('js', function () {
         .pipe(gulp.dest('views/files-min'));
 });
 
-gulp.task('js-public', function () {
-    return gulp.src(['public/**/*.js'])
+gulp.task('public-js', function () {
+    return gulp.src([
+        '!public/**/*.min.js',
+        'public/**/*.js'])
         .pipe(babel({
             presets: [babelPreset]
         }))
         .pipe(uglify())
         .pipe(rename({ suffix: '.min' }))
-        .pipe(gulp.dest('public/min/'));
+        .pipe(gulp.dest('public/'));
 });
 
 gulp.task('css', function(){
@@ -57,7 +58,9 @@ gulp.task('css', function(){
 });
 
 gulp.task('public-css', function(){
-    gulp.src(['public/**/*.css'])
+    gulp.src([
+        '!public/**/*.min.css',
+        'public/**/*.css'])
         .pipe(cleanCSS({compatibility: 'ie8'}))
         .pipe(rename({ suffix: '.min' }))
         .pipe(gulp.dest('public/'));

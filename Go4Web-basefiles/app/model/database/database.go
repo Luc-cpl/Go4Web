@@ -43,7 +43,11 @@ func (DB Database) Get(table string, id []string, campos []string) (resultado Se
 	table = "`" + table + "`"
 	query := "SELECT " + y + " FROM " + table + idQuery + ";"
 
-	rows, _ := DB.Query(query)
+	rows, err := DB.Query(query)
+	if err != nil {
+		return
+	}
+
 	cols, _ := rows.Columns()
 	row := 0
 	r := make(map[int]map[string]string)

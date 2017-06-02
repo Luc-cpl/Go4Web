@@ -54,7 +54,7 @@ func Views(w http.ResponseWriter, r *http.Request) {
 
 			if element.Auth == false {
 
-				if element.Redirect == true && userData.GetUserID(r) != "" {
+				if element.Redirect == true && userData.GetUserID(r) != "0" {
 					if ("/" + url) != redirectURL {
 						http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 						break
@@ -67,7 +67,7 @@ func Views(w http.ResponseWriter, r *http.Request) {
 					break
 				}
 
-			} else if userData.GetUserID(r) != "" {
+			} else if userData.GetUserID(r) != "0" {
 				auth = true
 				view = element
 				break

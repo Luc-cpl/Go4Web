@@ -63,7 +63,7 @@ func GetUserID(r *http.Request) (userID string) {
 			return value["userId"]
 		}
 	}
-	return
+	return "0"
 }
 
 func GetUserAuth(r *http.Request) (auth string) {

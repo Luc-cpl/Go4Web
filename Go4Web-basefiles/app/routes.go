@@ -17,6 +17,8 @@ func NewRouter() *mux.Router {
 
 		//database manager
 		Route{"DatabaseGet", "GET", "/api/db/get/{rest:.*}", controller.DatabaseGet},
+		Route{"DatabasePost", "POST", "/api/db/post/{rest:.*}", controller.DatabasePost},
+
 		//views manager
 		Route{"Index", "GET", "/", controller.Views},
 		Route{"Views", "GET", "/{rest:.*}", controller.Views},
