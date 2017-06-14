@@ -6,10 +6,6 @@ Is just a simple start point to build web applications.
 
 To use Go4Web framework, is necessary de follow packages:
 
-* github.com/go-sql-driver/mysql
-```
-      $ go get github.com/go-sql-driver/mysql
-```
 *  github.com/gorilla/securecookie
 ```
       $ go get github.com/gorilla/securecookie
