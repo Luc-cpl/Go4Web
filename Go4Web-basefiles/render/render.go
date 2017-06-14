@@ -5,29 +5,36 @@ import (
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
+	"strings"
 )
 
 var path = "views/files-min/"
 
-func Render(w http.ResponseWriter, data interface{}, files ...string) {
-	var err error
+func Render(w http.ResponseWriter, data interface{}, templateFile string, files map[string]string) {
 	tmpl := template.New("")
 
 	var html string
-	for _, element := range files {
-		file, _ := ioutil.ReadFile(path + element)
-		s := string(file)
+	if templateFile != "" {
+		byt, _ := ioutil.ReadFile(path + templateFile)
+		html = string(byt)
+	}
 
-		if filepath.Ext(path+element) == ".css" {
-			s = `{{define "css"}}` + s + `{{end}}`
-		} else if filepath.Ext(path+element) == ".js" {
-			s = `{{define "js"}}` + s + `{{end}}`
+	for key, element := range files {
+		if element != "" {
+			file, err := ioutil.ReadFile(path + element)
+			if err == nil {
+				if strings.EqualFold(filepath.Ext(path+element), ".html") {
+					html += string(file)
+				} else {
+					html += `{{define "` + key + `"}}` + string(file) + `{{end}}`
+				}
+			}
 		}
-		html = html + s
+
 	}
 	tmpl, _ = tmpl.Parse(html)
 
-	if err = tmpl.Execute(w, data); err != nil {
+	if err := tmpl.Execute(w, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 

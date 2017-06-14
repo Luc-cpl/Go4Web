@@ -1,29 +1,50 @@
 [
   {
     "url": "",
-    "html": "home.html",
     "template":"template.html",
-    "css": "",
-    "js": "",
+    "files":{
+      "body": "home.html"
+    },
     "auth": false,
     "redirect": true
   },
   {
     "url": "login",
-    "html": "login/login.html",
     "template":"template.html",
-    "css": "login/login.css",
-    "js": "login/login.js",
+    "files":{
+      "body": "login/login.html",
+      "css": "login/login.css",
+      "js": "login/login.js"
+    },
     "auth": false,
     "redirect": true
   },
   {
     "url": "",
-    "html": "user/user.html",
     "template":"user/template.html",
-    "css": "",
-    "js": "",
+    "files":{
+      "body": "user/user.html",
+      "css": "",
+      "js": ""
+    },
     "auth": true,
     "redirect": false
+  },
+  {
+    "url": "teste",
+    "files":{
+      "body": "websocket-test.html",
+      "css": "",
+      "js": ""
+    },
+    "auth": false,
+    "redirect": true
+  },
+  {
+    "url": "404",
+    "template":"template.html",
+    "files":{
+      "body": "error404.html"
+    }
   }
 ]

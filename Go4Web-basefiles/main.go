@@ -1,22 +1,39 @@
 package main
 
 import (
-	"log"
-	"github.com/Luc-cpl/Go4Web/Go4Web-basefiles/app"
-	"github.com/Luc-cpl/Go4Web/Go4Web-basefiles/app/model/database"
+	"fmt"
 	"net/http"
+	"time"
+
+	"github.com/Luc-cpl/Go4Web/Go4Web-basefiles/app"
+	mgoS "github.com/Luc-cpl/mgoSimpleCRUD"
+	mgo "gopkg.in/mgo.v2"
 )
+
+var serverPort = ":3000"
 
 func main() {
 
-	db, err := database.NewOpen("root:@/db_teste")
-	if err != nil {
-		log.Println(err)
+	//Database connection info (eddit if necessary)
+	maxWait := time.Duration(5 * time.Second)
+	local, err := mgo.DialWithTimeout("localhost:27017", maxWait)
+	if err == nil {
+		fmt.Println("Connected to MongoDB.")
+		defer local.Close()
+		mgoS.DB.Session = local.Clone()
+		mgoS.DB.Database = "teste"
+		mgoS.DB.UserIdentityValue = "email"
+		mgoS.DB.AuthMap, err = mgoS.LoadAuthMap("./authMap.json")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	} else {
+		fmt.Println("Unable to connect to local mongo instance!")
 	}
-	defer db.Close()
-	database.DB = db
 
 	router := routes.NewRouter()
 
-	http.ListenAndServe(":8080", router)
+	fmt.Println("started server at port", serverPort)
+	http.ListenAndServe(serverPort, router)
 }

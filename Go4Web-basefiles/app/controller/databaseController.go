@@ -1,281 +1,182 @@
 package controller
 
 import (
-	"errors"
+	"encoding/json"
+	"log"
 	"net/http"
-	"strconv"
 	"strings"
 
-	"github.com/Luc-cpl/Go4Web/Go4Web-basefiles/app/model/database"
-	"github.com/Luc-cpl/Go4Web/Go4Web-basefiles/app/model/userData"
+	"time"
 
-	"encoding/json"
+	"reflect"
 
-	"github.com/gorilla/mux"
+	mgoS "github.com/Luc-cpl/mgoSimpleCRUD"
+	"github.com/gorilla/websocket"
 )
 
-//access 0 = root
-//access 1 = can take info from users with access equal or greater than 1
-//access 2 = can take info from users with access equal or greater than 2
-//...
+type userCall struct {
+	Request     []mgoS.Request `json:"request"`
+	LoopRequest bool           `json:"loopRequest"` //false = request one time | true = request continuously (only for READ)
+	BreakLoop   bool           `json:"breakLoop"`   //false = request one time | true = request continuously (only for READ)
+}
 
-//  table = table name
-//	allUsers = (true = all info/ false = user info)
-//	query1 = follows databese function
-//	query2 = follows databese function
+const (
+	writeWait      = 10 * time.Second    // Time allowed to write a message to the peer.
+	pongWait       = 60 * time.Second    // Time allowed to read the next pong message from the peer.
+	pingPeriod     = (pongWait * 9) / 10 // Send pings to peer with this period. Must be less than pongWait.
+	maxMessageSize = 512                 // Maximum message size allowed from peer.
+)
 
-//password and user-id are forbiden in all mettods
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+}
 
-var splitVar1 = "/"
-var splitVar2 = "&"
+// Client is a middleman between the websocket connection and the hub.
+type Client struct {
+	conn *websocket.Conn // The websocket connection.
+	send chan []byte     // Buffered channel of outbound messages.
+	User mgoS.User       // The user information.
+}
 
-//DatabaseGet  /api/db/get/table/allUsers/query1/query2
-func DatabaseGet(w http.ResponseWriter, r *http.Request) {
-	urlValues := mux.Vars(r)["rest"]
-
-	err := contentCheck(urlValues)
+//NewWebsocket start a websocket connection whith client using the mgoSimpleCRUD package
+func NewWebsocket(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		json.NewEncoder(w).Encode(err)
+		log.Println(err)
 		return
 	}
 
-	if strings.Count(urlValues, "/") != 3 {
-		json.NewEncoder(w).Encode("The path don't matches with necessary fields")
-		return
-	}
+	client := &Client{conn: conn, send: make(chan []byte, 256)}
+	client.User = GetUser(r)
 
-	s := strings.Split(urlValues, splitVar1)
-	table := s[0]
-	allUsers := s[1]
-	var query1 []string
-	if s[2] != "&" {
-		query1 = strings.Split(s[2], splitVar2)
-	}
-	query2 := strings.Split(s[3], splitVar2)
+	client.readPump()
 
-	if allUsers == "false" {
-		userID := userData.GetUserID(r)
-		newQuery1 := make([]string, len(query1)+3)
-		newQuery1[0] = "user-id"
-		newQuery1[1] = "="
-		newQuery1[2] = userID
-		for i := 3; i < len(newQuery1); i++ {
-			newQuery1[i] = query1[i-3]
-		}
-		query1 = newQuery1
-	}
-	var auth authorization
+}
 
-	if (len(query1)%3) == 0 && len(query1) > 0 {
+func (c *Client) readPump() {
+	messages := make(chan []interface{}) //a chan to pass messages to writePump
+	stop := make(chan bool)              //a chan to stop the writePump
+	stopLoop := make(chan bool)          //a chan to stop all the loopRequests
 
-		userAuth, _ := strconv.Atoi(userData.GetUserAuth(r))
+	go c.writePump(messages, stop) //starts the writePump
 
-		auth, err := authCheck(userAuth, table)
+	defer func() {
+		stop <- true
+		stopLoop <- true
+		c.conn.Close()
+	}()
+	c.conn.SetReadLimit(maxMessageSize)
+	c.conn.SetReadDeadline(time.Now().Add(pongWait))
+	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	for {
+		_, msg, err := c.conn.ReadMessage()
 
 		if err != nil {
-			json.NewEncoder(w).Encode("error requesting authorization")
-			return
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
+				log.Printf("error: %v", err)
+			}
+			break
 		}
-
-		if auth.AllContent == false && query1[0] != "user-id" {
-			auth.Auth = false
-		}
-	} else {
-		json.NewEncoder(w).Encode("The request values don´t match with necessary number of values")
-		return
-	}
-
-	if auth.Auth == true {
-		response, err := database.DB.Get(table, query1, query2)
+		var call userCall
+		err = json.Unmarshal(msg, &call)
 		if err != nil {
-			json.NewEncoder(w).Encode(err)
-			return
+			var newMsg []interface{}
+			json.Unmarshal([]byte(`[{"err":"`+err.Error()+`"}]`), &newMsg)
+			messages <- newMsg
 		}
 
-		json.NewEncoder(w).Encode(response)
-	} else {
-		json.NewEncoder(w).Encode("You don't have autorization for this request")
-		return
-	}
-
-}
-
-//DatabasePost need keys passed on GET mettod and values on POST: /api/db/post/table/key1&key2&key3
-//All posts are bound to a user-id (you can use an annonimous id = 0 if needed)
-func DatabasePost(w http.ResponseWriter, r *http.Request) {
-	urlValues := mux.Vars(r)["rest"]
-
-	err := contentCheck(urlValues)
-	if err != nil {
-		json.NewEncoder(w).Encode(err)
-		return
-	}
-
-	if strings.Count(urlValues, "/") != 1 {
-		json.NewEncoder(w).Encode("The path don't matches with necessary fields")
-		return
-	}
-	s := strings.Split(urlValues, splitVar1)
-	table := s[0]
-
-	userID := userData.GetUserID(r)
-
-	query1 := strings.Split(s[1], splitVar2)
-	newQuery1 := make([]string, len(query1)+1)
-	newQuery1[0] = "user-id"
-	for i := 1; i < len(newQuery1); i++ {
-		newQuery1[i] = query1[i-1]
-	}
-	query1 = newQuery1
-
-	query2 := make([]string, len(query1))
-	query2[0] = userID
-	for i := 1; i < len(query1); i++ {
-		query2[i] = r.PostFormValue(query1[i])
-	}
-
-	userAuth, _ := strconv.Atoi(userData.GetUserAuth(r))
-
-	auth, err := authCheck(userAuth, table)
-
-	if err != nil {
-		json.NewEncoder(w).Encode("error requesting authorization")
-		return
-	}
-
-	if auth.Create == true {
-		err = database.DB.Insert(table, query1, query2)
-		if err != nil {
-			json.NewEncoder(w).Encode("err")
-			return
-		}
-		json.NewEncoder(w).Encode("data included to database")
-	} else {
-		json.NewEncoder(w).Encode("You don't have autorization for this request")
-		return
-	}
-}
-
-func DatabaseUpdate(w http.ResponseWriter, r *http.Request) {
-
-}
-
-func DatabaseDelete(w http.ResponseWriter, r *http.Request) {
-
-}
-
-type Authorization struct {
-	Get       bool
-	GetAll    bool
-	Create    bool
-	CreateAll bool
-	Change    bool
-	ChangeAll bool
-	Delete    bool
-	DeleteAll bool
-}
-
-func AuthCheck(userAuth int, table string, methods ...string) (auth Authorization, err error) {
-	if userAuth == 0 {
-		auth.Get = true
-		auth.GetAll = true
-		auth.Create = true
-		auth.CreateAll = true
-		auth.Change = true
-		auth.ChangeAll = true
-		auth.Delete = true
-		auth.DeleteAll = true
-		return
-	}
-
-	checkQuery1 := []string{"table-name", "=", table}
-	for _, method := range methods {
-		checkQuery2 := []string{}
-		if method == "GET" {
-			checkQuery2 = []string{
-				"auth-level",
-				"regressive-auth-level",
-				"allcontent-auth",
-				"regressive-allcontent-auth"}
-		} else if method == "POST" {
-			checkQuery2 = []string{
-				"auth-level",
-				"regressive-auth-level",
-				"create-auth",
-				"regressive-create-auth"}
-		} else if method == "UPDATE" {
-			checkQuery2 = []string{
-				"change-auth",
-				"regressive-change-auth",
-				"allcontent-change-auth",
-				"regressive-allcontent-change-auth"}
-		} else if method == "DELETE" {
-			checkQuery2 = []string{
-				"delete-auth",
-				"regressive-delete-auth",
-				"allcontent-delete-auth",
-				"regressive-allcontent-delete-auth"}
-		}
-
-		check, err := database.DB.Get("db-auth", checkQuery1, checkQuery2)
-		if err != nil {
-			return auth, err
-		}
-		authLevel := 999
-		regLevel := 999
-		allLevel := 999
-		regAllLevel := 999
-		for _, y := range check {
-			s := make(map[int]int)
+		if !call.LoopRequest {
+			go c.singleRequest(call, messages, stopLoop)
+		} else {
 			n := 0
-			for _, value := range y {
-				s[n], _ = strconv.Atoi(value)
-				n++
+			for key := range call.Request {
+				if strings.Contains("find findOne readID", call.Request[key].Method) {
+					n++
+				}
 			}
-			if s[0] < authLevel && s[0] > userAuth {
-				authLevel = s[0]
-				regLevel = s[1]
-				allLevel = s[2]
-				regAllLevel = s[3]
-			} else if s[0] == userAuth {
-				authLevel = s[0]
-				regLevel = s[1]
-				allLevel = s[2]
-				regAllLevel = s[3]
-				break
+			if n == len(call.Request) {
+				go c.startLoop(call, messages, stopLoop)
+			} else {
+				var newMsg []interface{}
+				json.Unmarshal([]byte(`[{"err":"can't loop into non read request"}]`), &newMsg)
+				messages <- newMsg
 			}
-		}
-		if authLevel >= userAuth && regLevel <= userAuth {
-			if method == "GET" {
-				auth.GetAll = true
-			} else if method == "POST" {
-				auth.CreateAll = true
-			} else if method == "UPDATE" {
-				auth.ChangeAll = true
-			} else if method == "DELETE" {
-				auth.DeleteAll = true
-			}
-			if allLevel >= userAuth && regAllLevel <= userAuth {
-
-			}
-
 		}
 
 	}
+}
 
+func (c *Client) writePump(messages chan []interface{}, stop chan bool) {
+	ticker := time.NewTicker(pingPeriod)
+	defer func() {
+		ticker.Stop()
+		c.conn.Close()
+	}()
+	for {
+		select {
+		case <-stop:
+			return
+		case resp, ok := <-messages:
+			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if !ok {
+				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
+
+			c.conn.WriteJSON(resp)
+
+		case <-ticker.C:
+			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := c.conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+				return
+			}
+		}
+	}
+}
+
+func (c *Client) startLoop(call userCall, messages chan []interface{}, stopL chan bool) {
+	var oldResp []interface{}
+	for {
+		select {
+		case <-stopL:
+			stopL <- true
+			return
+		default:
+			resp, err := check(c.User, call.Request)
+			if err != nil {
+				var newMsg []interface{}
+				json.Unmarshal([]byte(`[{"err":"`+err.Error()+`"}]`), &newMsg)
+				messages <- newMsg
+				return
+			} else if !reflect.DeepEqual(oldResp, resp) {
+				oldResp = resp
+				messages <- resp
+			}
+		}
+	}
+}
+
+func (c *Client) singleRequest(call userCall, messages chan []interface{}, stopLoop chan bool) {
+	resp, err := check(c.User, call.Request)
+	if err != nil {
+		var newMsg []interface{}
+		json.Unmarshal([]byte(`[{"err":"`+err.Error()+`"}]`), &newMsg)
+		messages <- newMsg
+		return
+	}
+	messages <- resp
 	return
 }
 
-func contentCheck(urlValues string) (err error) {
-	if strings.Contains(urlValues, "user-id") {
-		err = errors.New("Unauthorized request")
-		return
-	} else if strings.Contains(urlValues, "password") {
-		err = errors.New("Unauthorized request")
-		return
-	} else if strings.Contains(urlValues, ";") {
-		err = errors.New("Unauthorized request")
-		return
+func check(user mgoS.User, request []mgoS.Request) (response []interface{}, err error) {
+	respInter := make([]interface{}, len(request))
+	for key := range request {
+		resp, err := mgoS.DB.CRUDRequest(user, request[key])
+		if err != nil {
+			return nil, err
+		}
+		json.Unmarshal(resp, &respInter[key])
 	}
-	return
+	return respInter, nil
 }

@@ -8,8 +8,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Luc-cpl/Go4Web/Go4Web-basefiles/app/model/userData"
-
 	"github.com/Luc-cpl/Go4Web/Go4Web-basefiles/render"
 	"github.com/gorilla/mux"
 )
@@ -18,13 +16,11 @@ import (
 var redirectURL = "/"
 
 type viewMap struct {
-	URL      string `json:"url"`      //the access url
-	HTML     string `json:"html"`     //the html to pass in view folder
-	Template string `json:"template"` //the html template to pass in view folder
-	CSS      string `json:"css"`      //the css to pass in view folder
-	JS       string `json:"js"`       //the javascript to pass in view folder
-	Auth     bool   `json:"auth"`     //if login is necessary
-	Redirect bool   `json:"redirect"` //to redirect if is logged
+	URL      string            `json:"url"`      //the access url
+	Template string            `json:"template"` //the html template to pass in view folder
+	Auth     bool              `json:"auth"`     //if login is necessary
+	Redirect bool              `json:"redirect"` //to redirect if is logged
+	Files    map[string]string `json:"files"`    //files to render in template
 }
 
 //Views controll all the url views in webapp
@@ -39,52 +35,57 @@ func Views(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var decodedJSON []viewMap
-	var view viewMap
 
 	err = json.Unmarshal(raw, &decodedJSON)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	exist := false
-	auth := false
 
+	user := GetUser(r)
+
+	view, auth, exist := findFiles(decodedJSON, url, user.ID, w, r)
+
+	if auth == true && exist == true {
+		render.Render(w, nil, view.Template, view.Files)
+		return
+	} else if exist == true {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	} else {
+		if strings.ContainsAny(url, ".") {
+			http.ServeFile(w, r, "./public/"+url)
+			return
+		}
+		view, _, _ = findFiles(decodedJSON, "404", "", w, r)
+		render.Render(w, nil, view.Template, view.Files)
+		return
+
+	}
+
+}
+
+func findFiles(decodedJSON []viewMap, url string, userID string, w http.ResponseWriter, r *http.Request) (view viewMap, auth bool, exist bool) {
 	for _, element := range decodedJSON {
-		if element.URL == url {
+		if strings.EqualFold(element.URL, url) {
 			exist = true
-
 			if element.Auth == false {
-
-				if element.Redirect == true && userData.GetUserID(r) != "0" {
+				if element.Redirect == true && !strings.EqualFold(userID, "") {
 					if ("/" + url) != redirectURL {
 						http.Redirect(w, r, redirectURL, http.StatusSeeOther)
-						break
-					} else {
-						auth = false
+						return view, false, false
 					}
+					auth = false
 				} else {
 					auth = true
-					view = element
-					break
+					return element, auth, exist
 				}
 
-			} else if userData.GetUserID(r) != "0" {
+			} else if !strings.EqualFold(userID, "") {
 				auth = true
-				view = element
-				break
+				return element, auth, exist
 			}
 
 		}
 	}
-	if auth == true && exist == true {
-		render.Render(w, nil, view.Template, view.HTML, view.CSS, view.JS)
-	} else if exist == true {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-	} else {
-		if strings.ContainsAny(url, ".") {
-			http.ServeFile(w, r, "./public/"+url)
-		} else {
-			render.Render(w, nil, "template.html", "error404.html")
-		}
-	}
-
+	return view, false, false
 }
