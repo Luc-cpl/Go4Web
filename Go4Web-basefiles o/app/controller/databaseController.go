@@ -199,27 +199,3 @@ func check(user mgoS.User, request []mgoS.Request) (response []interface{}, err 
 	}
 	return respInter, nil
 }
-
-func getRequest(request string, user mgoS.User) (response string) {
-	var req []mgoS.Request
-	err := json.Unmarshal([]byte(request), &req)
-	if err != nil {
-		errMsg := `[{"err":"` + err.Error() + `"}]`
-		return errMsg
-	}
-	for key := range req {
-		if !strings.Contains("find findOne readID", req[key].Method) {
-			errMsg := `[{"err":"unnautorized method"}]`
-			return errMsg
-		}
-	}
-
-	responseInter, err := check(user, req)
-	if err != nil {
-		errMsg := `[{"err":"` + err.Error() + `"}]`
-		return errMsg
-	}
-
-	responseByt, _ := json.Marshal(responseInter)
-	return string(responseByt)
-}

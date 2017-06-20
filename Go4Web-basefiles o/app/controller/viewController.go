@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/Luc-cpl/Go4Web/Go4Web-basefiles/render"
-
 	"github.com/gorilla/mux"
 )
 
@@ -28,17 +27,8 @@ type viewMap struct {
 func Views(w http.ResponseWriter, r *http.Request) {
 	url := mux.Vars(r)["rest"]
 
-	var data interface{}
-	if strings.Contains(url, "/request:") {
-		arr := strings.SplitN(url, "/request:", 2)
-		url = arr[0]
-		data = getRequest(arr[1], GetUser(r))
-	} else if strings.HasPrefix(url, "request:") {
-		data = getRequest(strings.Trim(url, "request:"), GetUser(r))
-		url = ""
-	}
-
 	raw, err := ioutil.ReadFile("./views/viewmap.json")
+
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
@@ -56,7 +46,7 @@ func Views(w http.ResponseWriter, r *http.Request) {
 	view, auth, exist := findFiles(decodedJSON, url, user.ID, w, r)
 
 	if auth == true && exist == true {
-		render.Render(w, data, view.Template, view.Files)
+		render.Render(w, nil, view.Template, view.Files)
 		return
 	} else if exist == true {
 		http.Redirect(w, r, "/", http.StatusSeeOther)

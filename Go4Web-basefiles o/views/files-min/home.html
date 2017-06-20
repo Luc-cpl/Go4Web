@@ -1,0 +1,2 @@
+{{define "head"}}<link rel="stylesheet" href="css/style.css"><style>h1 { color: #fff; text-shadow: 0 0 10px rgba(0,0,0,0.3); letter-spacing:2px; text-align:center;margin: 20%; font-size: 55px;}
+		p { color: #fff; text-align:center;}</style>{{end}} {{define "body"}}<div id="greeting-div"></div><h1>Go 4 Web<br><a href="/login" class="btn btn-info">Login</a></h1><script src="https://fb.me/react-15.0.0.js"></script><script src="https://fb.me/react-dom-15.0.0.js"></script><script>{{template "js" .PageData}}</script>{{end}}

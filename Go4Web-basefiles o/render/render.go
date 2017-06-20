@@ -34,11 +34,7 @@ func Render(w http.ResponseWriter, data interface{}, templateFile string, files 
 	}
 	tmpl, _ = tmpl.Parse(html)
 
-	if data != nil {
-		if err := tmpl.Execute(w, data); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-	} else if err := tmpl.Execute(w, nil); err != nil {
+	if err := tmpl.Execute(w, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 

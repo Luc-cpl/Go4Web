@@ -3,7 +3,8 @@
     "url": "",
     "template":"template.html",
     "files":{
-      "body": "home.html"
+      "body": "home.html",
+      "js": "home.js"
     },
     "redirect": true
   },
@@ -21,10 +22,15 @@
     "url": "",
     "template":"user/template.html",
     "files":{
-      "body": "user/user.html",
-      "js": "user/user.js"
+      "body": "user/user.html"
     },
     "auth": true
+  },
+  {
+    "url": "teste",
+    "files":{
+      "body": "websocket-test.html"
+    }
   },
   {
     "url": "404",

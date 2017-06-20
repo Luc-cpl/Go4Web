@@ -56,7 +56,7 @@ func main() {
 		file = strings.Replace(file, `\`, `/`, -1)
 		newFilePath := newPath + strings.Replace(file, searchDir, "", 1)
 		if strings.ContainsAny(file, ".") == false {
-			fmt.Println("pasta: " + newFilePath)
+			fmt.Println("folder: " + newFilePath)
 			err := os.MkdirAll(newFilePath, os.FileMode(0775))
 			if err != nil {
 				fmt.Println(err)

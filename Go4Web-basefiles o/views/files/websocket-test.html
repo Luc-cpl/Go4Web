@@ -1,0 +1,92 @@
+<html>
+<head>
+    <title>WebSocket demo</title>
+</head>
+<body>
+
+    <div>
+        <form>
+            <input type="text" id="nome" placeholder="nome"/><br />
+            <input type="text" id="conteudo" placeholder="conteudo"/><br />
+            <button type="button" id="sendBtn">visualisar</button>
+            <button type="button" id="sendBtn2">Send</button>
+        </form>
+    </div>
+    <div id="container"></div>
+
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    <script type="text/javascript">
+        $(function () {
+            var ws;
+            if (window.WebSocket === undefined) {
+                $("#container").append("Your browser does not support WebSockets");
+                return;
+            } else {
+                ws = initWS();
+            }
+            function initWS() {
+                var socket = new WebSocket("ws://localhost:8080/ws"),
+                    container = $("#container")
+                socket.onopen = function() {
+                    container.append("<p>Socket is open</p>");
+                };
+                socket.onmessage = function (e) {
+                    container.html(e.data);
+                }
+                socket.onclose = function () {
+                    container.append("<p>Socket closed</p>");
+                }
+                return socket;
+            }
+            $("#sendBtn").click(function (e) {
+                e.preventDefault();
+                ws.send(
+                    JSON.stringify({
+                        request: [
+                            {
+                                method:"readID",
+                                collection:"posts",
+                                values:{
+                                    postName: "",
+                                    
+                                    informações:{
+                                        conteudo: "",
+                                        autor: "",
+                                        alterações:{
+                                            "&arr:all":{data: ""}
+                                        }
+                                    }
+                                },
+                                id :"5941b7e2bcef98f149667f36"
+                                
+                            }
+                        ],
+                        loopRequest: true
+                    })
+                )
+            });
+            $("#sendBtn2").click(function (e) {
+                var nome = document.getElementById("nome").value;
+                var conteudo = document.getElementById("conteudo").value;
+                e.preventDefault();
+                ws.send(
+                    JSON.stringify({
+                        request: [
+                            {
+                                method:"createDoc",
+                                collection:"posts",
+                                values:{
+                                    postName: nome,
+                                    informações:{
+                                        conteudo: conteudo,
+                                    }
+                                }
+                            }
+                        ]
+                    })
+                )
+            });
+        });
+    </script>
+</body>
+</html>

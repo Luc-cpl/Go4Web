@@ -1,22 +1,4 @@
-<html>
-<head>
-    <title>WebSocket demo</title>
-</head>
-<body>
-
-    <div>
-        <form>
-            <input type="text" id="nome" placeholder="nome"/><br />
-            <input type="text" id="conteudo" placeholder="conteudo"/><br />
-            <button type="button" id="sendBtn">visualisar</button>
-            <button type="button" id="sendBtn2">Send</button>
-        </form>
-    </div>
-    <div id="container"></div>
-
-    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-    <script type="text/javascript">
-        $(function () {
+<html><head><title>WebSocket demo</title></head><body><div><form><input type="text" id="nome" placeholder="nome"><br><input type="text" id="conteudo" placeholder="conteudo"><br><button type="button" id="sendBtn">visualisar</button> <button type="button" id="sendBtn2">Send</button></form></div><div id="container"></div><script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script><script type="text/javascript">$(function () {
             var ws;
             if (window.WebSocket === undefined) {
                 $("#container").append("Your browser does not support WebSockets");
@@ -25,7 +7,7 @@
                 ws = initWS();
             }
             function initWS() {
-                var socket = new WebSocket("ws://localhost:3000/ws"),
+                var socket = new WebSocket("ws://localhost:8080/ws"),
                     container = $("#container")
                 socket.onopen = function() {
                     container.append("<p>Socket is open</p>");
@@ -57,7 +39,7 @@
                                         }
                                     }
                                 },
-                                id : "59405719f706ac361a3a8dbc"
+                                id :"5941b7e2bcef98f149667f36"
                                 
                             }
                         ],
@@ -77,18 +59,13 @@
                                 collection:"posts",
                                 values:{
                                     postName: nome,
-                                    
                                     informações:{
-                                        conteudo: conteudo
+                                        conteudo: conteudo,
                                     }
                                 }
                             }
-                        ],
-                        breakLoop: true
+                        ]
                     })
                 )
             });
-        });
-    </script>
-</body>
-</html>
+        });</script></body></html>

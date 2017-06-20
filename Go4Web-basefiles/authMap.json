@@ -3,36 +3,13 @@
         "users": {
             "_id": "a-read",
             "admin": "u-read adm-update",
-            "email": "u-read c-read",
-            "name": "a-read u-update adm-update",
-            "contacts":{
-                "&user_id":{
-                    "messages":[
-                        {
-                            "content":"u-read",
-                            "created_at":"u-read"
-                        }
-                    ],
-                    "messages_auth":"u-delete u-create sc-create blacklist"
-                },
-                "&user_id_auth": "u-delete adm-delete u-create"
-            },
-            "contacts_auth": "u-create",
-            "contact_request":[
-                {
-                    "user_id": "u-read",
-                    "created_at":"u-read"
-                }
-            ],
-            "contact_request_auth":"a-create"
-        },
-        "users_auth":"adm-create"
+            "email": "u-read"
+        }
     },
     
     {
         "posts":{
             "postName": "g-read g-update",
-            
             "informações":{
                 "conteudo": "g-update g-read",
                 "autor": "g-read g-update",
@@ -43,6 +20,6 @@
             },
             "informações_auth":"g-create g-delete"
         },
-        "posts_auth": "g-create g-delete"
+        "posts_auth": "a-create g-delete"
     }
 ]
